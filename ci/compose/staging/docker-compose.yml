@@ -1,0 +1,22 @@
+version : '2'
+
+services:
+  server:
+    image: daniellavoie/xcomponent-config-server:staging
+    environment:
+      SPRING_CLOUD_CONFIG_SERVER_GIT_URI: https://github.com/spring-cloud-samples/config-repo
+    ports:
+      - "8080"
+    labels:
+      - "traefik.backend=staging-xcomponent-config-server"
+      - "traefik.frontend.rule=Host:staging.config-server.xcomponent.cspinformatique.com"
+      - "traefik.port=8080"
+      - "traefik.docker.network=traefik_webgateway"
+    networks:
+      - traefik
+      - default
+
+networks:
+  traefik:
+    external:
+      name: traefik_webgateway

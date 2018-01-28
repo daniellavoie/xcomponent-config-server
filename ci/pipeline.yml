@@ -1,0 +1,29 @@
+
+
+jobs:
+- name: build-master
+  plan:
+  - get: src-master
+    trigger: true
+  - task: maven-build
+    file: src-master/ci/tasks/build/maven-build.yml
+    input_mapping:
+      src: src-master
+  - put: docker-image
+    params:
+      build: src-master
+
+resources:
+- name: src-master
+  type: git
+  source:
+    uri: {{git-url}}
+    branch: master
+
+- name: docker-image
+  type: docker-image
+  source:
+    email: {{docker-hub-email}}
+    username: {{docker-hub-username}}
+    password: {{docker-hub-password}}
+    repository: xcomponent-config-server

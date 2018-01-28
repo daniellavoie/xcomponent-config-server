@@ -1,0 +1,39 @@
+node {
+    stage("Build") {
+        withMaven(
+                maven: 'maven-3',
+                mavenLocalRepo: '.repository'
+        ) {
+            checkout scm
+
+            // Run the maven build
+            sh "mvn clean install"
+        }
+    }
+
+    stage('Docker Build'){
+        docker.withServer("unix:///var/run/docker.sock") {
+            docker.build("daniellavoie/xcomponent-config-server")
+
+            withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'github-daniellavoie', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD']]) {
+                sh "docker login --password=${PASSWORD} --username=${USERNAME}"
+
+                sh "docker tag ${USERNAME}/xcomponent-config-server ${USERNAME}/xcomponent-config-server:" + env.BRANCH_NAME
+                sh "docker tag ${USERNAME}/xcomponent-config-server ${USERNAME}/xcomponent-config-server:staging"
+
+                if (env.BRANCH_NAME == "master") {
+                    sh "docker tag ${USERNAME}/xcomponent-config-server ${USERNAME}/xcomponent-config-server:latest"
+                    sh "docker push ${USERNAME}/xcomponent-config-server:latest"
+                }
+            }
+        }
+    }
+
+    stage('Deploy Staging env') {
+        try {
+            sh "/usr/local/bin/docker-compose -f ci/compose/staging/docker-compose.yml down"
+        } catch(e){ }
+
+        sh "/usr/local/bin/docker-compose -f ci/compose/staging/docker-compose.yml up -d"
+    }
+}
